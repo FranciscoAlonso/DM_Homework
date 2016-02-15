@@ -50,7 +50,7 @@ Se crea el modelo usando el set de entrenamiento especificando que el atributo a
   
 ```
 
-La salida del algoritmo provee un arbol de decisión que para el set de entrenamiento tiene una tasa de errores de 0% luego del proceso de boosting. También se muestra la importancia de cada atributo para el modelo construido.
+La salida del algoritmo provee un arbol de decisión que para el set de entrenamiento tiene una tasa de errores de 0% luego del proceso de boosting. También se muestra la importancia de cada atributo para el modelo construido (por razones de espacio la salida del algoritmo fue truncada e impresa).
 
 ```{r echo=FALSE, prompt=FALSE}
 cat("Evaluation on training data (1279 cases):
@@ -148,6 +148,7 @@ La exactitud arrojada es 0.6977. La media geométrica es calculada a continuación
   mean.geometric(a)
 ```
 
+La media geometrica es baja dado que la sensibilidad es cero para varias clases. Lo que muestra un bajo rendimento general para el algoritmo en este conjunto de datos.
 
 ##Ejercicio 3
 
@@ -208,9 +209,11 @@ Luego se construyen los modelos nuevamente y se prueban con los nuevos conjuntos
   seismicTreeC50 <- C5.0(trainSeismic$class~., data = trainSeismic, trials = 20)
   predictionC50 <- predict.C5.0(seismicTreeC50, testSeismic)
   confMatrix <- confusionMatrix(predictionC50, testSeismic$class)
-  a <- confMatrix$byClass[,1]
+  a <- sqrt(confMatrix$byClass[1]*confMatrix$byClass[2])
   print("C5.0 media geométrica:")
-  mean.geometric(a)
+```
+```{r echo=FALSE}
+  a[[1]]
 ```
 
 - RIPPER
@@ -219,18 +222,19 @@ Luego se construyen los modelos nuevamente y se prueban con los nuevos conjuntos
   seismicRIPPER <- RWeka::JRip(trainSeismic$class~., data = trainSeismic)
   predictionRIPPER <- predict(seismicRIPPER, testSeismic)
   confMatrix <-confusionMatrix(predictionRIPPER, testSeismic$class)
-  a <- confMatrix$byClass[,1]
+  a <- sqrt(confMatrix$byClass[1]*confMatrix$byClass[2])
   print("RIPPER media geométrica:")
-  mean.geometric(a)
+```
+```{r echo=FALSE}
+  a[[1]]
 ```
 
-Ambos modelos presentan un buen desempeño, sin embargo, el algoritmo C5.0 supera al algoritmo RIPPER por un pequeño margen en cuanto a precisión y sensitividad.
+Ambos modelos presentan un buen desempeño, sin embargo, el algoritmo C5.0 supera al algoritmo RIPPER por un pequeño margen en cuanto a precisión y la media geométrica.
 
+##Nota:
 
+Se usó el algoritmo C5.0 en lugar de C4.5 por presentar mejoras y la conveniencia de estar disponible individualmente como un paquete para R, sin embargo, el C4.5 está presente en el paquete RWeka. Sería interesante y está como pendiente, comparar el rendimiento de ambos algoritmos en estos ejercicios.
 
-
-```{r}
-```
 
 
 
