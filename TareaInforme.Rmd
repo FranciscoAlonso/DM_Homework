@@ -1,0 +1,230 @@
+---
+title: "Minería de Datos - Tarea 1"
+author: "Francisco Alonso"
+date: "February 13, 2016"
+output: pdf_document
+---
+
+#Tarea 1
+
+##Ejercicio 1
+
+La certificación de la calidad vino es un proceso que consume tiempo y puede resultar
+costoso, especialmente si se requiere de la evaluación realizada por expertos humanos. Con
+el fin de apoyar este proceso, se quiere aplicar la minería de datos para construir una
+aplicación que permita estimar la calidad de una muestra de vino a partir de variables
+fisicoquímicas.
+
+Se aplicó el proceso de minería de datos usando el algoritmo de clasificación C5.0 que extiende el C4.5. 
+
+```{r warning=FALSE, echo=FALSE, message=FALSE}
+  library(C50)
+  library(dplyr)
+  library(caret)
+  library(PerformanceAnalytics)
+  library(foreign)
+  library(DMwR)
+```
+
+Luego de cargar la data se convierte la clase de valor numérico a nominal o "factor".
+
+```{r}
+  wine <- as.data.frame(read.csv("winequality-red.csv", sep = ";"))
+  wine$quality <- as.factor(wine$quality)
+```
+
+Se asigna la semilla para fines de reproducibilidad y se separa aleatoriamente el data set en un set de entrenamiento y uno de prueba.
+
+```{r}
+  set.seed(42)
+  trainingIndex <- sample(seq_len(nrow(wine)), size = (nrow(wine) * 0.8))
+  
+  trainWine <- wine[trainingIndex, ]
+  testWine <- wine[-trainingIndex, ]
+```
+
+Se crea el modelo usando el set de entrenamiento especificando que el atributo a predecir es "quality". El parámetro "trials" especifica el número de iteraciones del algoritmo de aprendizaje intentando mejorar su precisión a partir de previas iteraciones.
+
+```{r}
+  wineTree <- C5.0(trainWine$quality~., data = trainWine, trials = 7)
+  
+```
+
+La salida del algoritmo provee un arbol de decisión que para el set de entrenamiento tiene una tasa de errores de 0% luego del proceso de boosting. También se muestra la importancia de cada atributo para el modelo construido.
+
+```{r echo=FALSE, prompt=FALSE}
+cat("Evaluation on training data (1279 cases):
+
+Trial	    Decision Tree   
+-----	  ----------------  
+	  Size      Errors  
+
+   0	   192  116( 9.1%)
+   1	   132  260(20.3%)
+   2	   145  245(19.2%)
+   3	   159  228(17.8%)
+   4	   141  290(22.7%)
+   5	   130  295(23.1%)
+   6	   155  223(17.4%)
+boost	          0( 0.0%)   <<
+
+
+	   (a)   (b)   (c)   (d)   (e)   (f)    <-classified as
+	  ----  ----  ----  ----  ----  ----
+	     9                                  (a): class 3
+	          38                            (b): class 4
+	               552                      (c): class 5
+	                     511                (d): class 6
+	                           154          (e): class 7
+	                                  15    (f): class 8
+
+
+	Attribute usage:
+
+	100.00%	volatile.acidity
+	100.00%	citric.acid
+	100.00%	sulphates
+	100.00%	alcohol
+	 99.45%	total.sulfur.dioxide
+	 98.98%	chlorides
+	 98.36%	fixed.acidity
+	 98.12%	residual.sugar
+	 95.54%	free.sulfur.dioxide
+	 94.76%	density
+	 94.21%	pH
+
+
+Time: 0.3 secs")
+```
+
+Se prueba el modelo usando el set de prueba y construyendo una matriz de confusión. 
+
+```{r}
+  prediction <- predict(wineTree, testWine)
+  table(testWine$quality, prediction)
+```
+
+Se observa que a pesar del proceso de boosting aún se producen clasificaciones erroneas. Especialmente entre las clases 6 y 7, un número considerable de elementos de la clase 7 fueron clasificados como clase 6. 
+
+
+##Ejercicio 2
+
+Para realizar estudios criminológicos sería conveniente disponer de una aplicación que, de manera automática, realice la identificación del tipo de vidrio en una escena de crimen. Como se dispone de un conjunto de datos de muestras que han sido clasificadas por los expertos, se quiere utilizar la minería de datos para construir un primer prototipo de esta aplicación.
+
+Para el proceso de minería de datos se usó el algoritmo C5.0. El primer paso es preparar la data. Se elimnina el atributo identificador, se le asigna un nombre a cada atributo para mejor indentificación y se cambia el tipo de dato de la clase a nominal ("factor").
+
+```{r}
+  glass <- as.data.frame(read.table("glass.data", sep = ","))
+  glass <- select(glass, -V1)
+  names(glass) <- c("RI", "Na", "Mg", "Al", "Si", "K", "Ca", "Ba", "Fe", "Type")
+  glass$Type <- as.factor(glass$Type)
+  
+  set.seed(42)
+  trainingIndex <- sample(seq_len(nrow(glass)), size = (nrow(glass) * 0.8))
+   
+  trainGlass <- glass[trainingIndex, ]
+  testGlass <- glass[-trainingIndex, ]
+```
+
+Luego de dividir aleatoriamente la data en conjunto de entrenamiento y conjunto de prueba, se procede a construir el arbol de decisión usando el algoritmo C5.0. Se asigna "trials = 5" luego de varios intentos para el proceso de boosting.
+
+```{r}
+  glassTree <- C5.0(trainGlass$Type~., data = trainGlass, trials = 5)
+```
+
+Por último se prueba el modelo en el conjunto de prueba y se extraen las métricas de evaluación.
+
+```{r}
+  prediction <- predict.C5.0(glassTree, testGlass)
+  table(True = testGlass$Type, predicted = prediction)
+  confMatrix <- confusionMatrix(prediction, testGlass$Type)
+  confMatrix
+```
+
+La exactitud arrojada es 0.6977. La media geométrica es calculada a continuación.
+
+```{r}
+  a <- confMatrix$byClass[,1]
+  mean.geometric(a)
+```
+
+
+##Ejercicio 3
+
+Uno de los peligros inherentes a la actividad minera es la amenaza sísmica que ocurre con frecuencia en muchas minas subterráneas. Los factores que influyen en la naturaleza de estos eventos son muy diversos, y las relaciones entre estos factores son muy complejas y muy poco conocidas. Los métodos utilizados hasta ahora para anticipar la actividad sísmica peligrosa no cubren las necesidades en este sector, ya que resultan insuficientes para lograr una buena sensibilidad y especificidad en las predicciones. Es por esto que se ha planteado verificar si los métodos de la minería de datos pueden ser capaces de predecir eventos sísmicos peligrosos.
+
+Se aplica el proceso de minería de datos usando los algoritmos C5.0 y RIPPER comparándolos en base a sensibldad y media geométrica.
+
+```{r}
+  seismic <- as.data.frame(read.arff("seismic-bumps.arff"))
+  seismic$class <- as.factor(seismic$class)
+  
+  set.seed(42)
+  trainingIndex <- sample(seq_len(nrow(seismic)), size = (nrow(seismic) * 0.8))
+  trainSeismic <- seismic[trainingIndex, ]
+  testSeismic <- seismic[-trainingIndex, ]
+```
+
+Luego de preparar la data se genera el modelo sando C5.0.
+
+```{r}
+  seismicTreeC50 <- C5.0(trainSeismic$class~., data = trainSeismic)
+  predictionC50 <- predict.C5.0(seismicTreeC50, testSeismic)
+  print(confusionMatrix(predictionC50, testSeismic$class))
+```
+
+Se construye el modelo usando el algoritmo RIPPER.
+
+```{r}
+  seismicRIPPER <- RWeka::JRip(trainSeismic$class~., data = trainSeismic)
+  predictionRIPPER <- predict(seismicRIPPER, testSeismic)
+  print(confusionMatrix(predictionRIPPER, testSeismic$class))
+```
+
+Los modelos arrojan una precision alta de 0.9536 y 0.9342 sin embargo la muestra está sesgada ya que no hay una cantidad representativa de la clase 1.
+
+```{r}
+  sampleClass0 <- filter(seismic, class == '0')
+  sampleClass1 <- filter(seismic, class == '1')
+  print("Class 0 rows ")
+  print(nrow(sampleClass0))
+  print("Class 1 rows ")
+  print(nrow(sampleClass1))
+```
+
+Se corre el algoritmo SMOTE sobre el conjunto de datos para generar una mestra que contenga más filas de la clase 1.
+
+```{r}
+  seismicSMOTED <- SMOTE(class ~ ., data = seismic, perc.over = 500, k = 5)
+  trainingIndex <- sample(seq_len(nrow(seismicSMOTED)), size = (nrow(seismicSMOTED) * 0.8))
+  trainSeismic <- seismicSMOTED[trainingIndex, ]
+  testSeismic <- seismicSMOTED[-trainingIndex, ]
+```
+
+Luego se construyen los modelos nuevamente.
+
+- C5.0:
+```{r}
+  seismicTreeC50 <- C5.0(trainSeismic$class~., data = trainSeismic, trials = 20)
+  predictionC50 <- predict.C5.0(seismicTreeC50, testSeismic)
+  print(confusionMatrix(predictionC50, testSeismic$class))
+```
+
+- RIPPER
+
+```{r}
+  seismicRIPPER <- RWeka::JRip(trainSeismic$class~., data = trainSeismic)
+  predictionRIPPER <- predict(seismicRIPPER, testSeismic)
+  print(confusionMatrix(predictionRIPPER, testSeismic$class))
+```
+
+
+
+
+
+
+```{r}
+```
+
+
+
