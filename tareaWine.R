@@ -5,7 +5,7 @@ tareaWine <- function()
   library(caret)
   wine <- as.data.frame(read.csv("winequality-red.csv", sep = ";"))
   wine$quality <- as.factor(wine$quality)
-  
+  write.csv(x = wine, file = "wine.csv")
 #   View(wine[,1])
 #   View(wine$fixed.acidity)
   

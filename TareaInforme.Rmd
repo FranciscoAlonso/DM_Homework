@@ -201,13 +201,16 @@ Se corre el algoritmo SMOTE sobre el conjunto de datos para generar una mestra q
   testSeismic <- seismicSMOTED[-trainingIndex, ]
 ```
 
-Luego se construyen los modelos nuevamente.
+Luego se construyen los modelos nuevamente y se prueban con los nuevos conjuntos de prueba. Cabe destacar que en este caso el conjunto de datos permitió al algoritmo realizar el proceso de boosting.
 
 - C5.0:
 ```{r}
   seismicTreeC50 <- C5.0(trainSeismic$class~., data = trainSeismic, trials = 20)
   predictionC50 <- predict.C5.0(seismicTreeC50, testSeismic)
-  print(confusionMatrix(predictionC50, testSeismic$class))
+  confMatrix <- confusionMatrix(predictionC50, testSeismic$class)
+  a <- confMatrix$byClass[,1]
+  print("C5.0 media geométrica:")
+  mean.geometric(a)
 ```
 
 - RIPPER
@@ -215,10 +218,13 @@ Luego se construyen los modelos nuevamente.
 ```{r}
   seismicRIPPER <- RWeka::JRip(trainSeismic$class~., data = trainSeismic)
   predictionRIPPER <- predict(seismicRIPPER, testSeismic)
-  print(confusionMatrix(predictionRIPPER, testSeismic$class))
+  confMatrix <-confusionMatrix(predictionRIPPER, testSeismic$class)
+  a <- confMatrix$byClass[,1]
+  print("RIPPER media geométrica:")
+  mean.geometric(a)
 ```
 
-
+Ambos modelos presentan un buen desempeño, sin embargo, el algoritmo C5.0 supera al algoritmo RIPPER por un pequeño margen en cuanto a precisión y sensitividad.
 
 
 
